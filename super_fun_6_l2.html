@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Fun 6 - Lesson 2: What Time Do You Get Up? 互動式英聽測驗</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js for Diagnostic Reports -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background-color: #f0f4f8;
+    }
+
+    .badge-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .badge-card:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Print Specific Styling */
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background: #fff !important; }
+      .card-shadow { box-shadow: none !important; border: 1px solid #cbd5e1 !important; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Header / Navigation Bar -->
+  <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-amber-300 text-xl font-bold">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold leading-tight tracking-wide">Super Fun 6 · Unit 2</h1>
+          <p class="text-xs text-indigo-200">What Time Do You Get Up? 互動聽力診斷評量</p>
+        </div>
+      </div>
+
+      <!-- Controls & Quick Stats -->
+      <div class="flex items-center gap-3">
+        <!-- Speed Toggle Scaffold -->
+        <div class="bg-indigo-800/80 rounded-lg p-1 flex items-center text-xs font-semibold">
+          <span class="px-2 text-indigo-300 hidden sm:inline"><i class="fa-solid fa-gauge-high mr-1"></i>語速</span>
+          <button id="speedNormalBtn" onclick="setSpeed(1.0)" class="px-2.5 py-1 rounded bg-indigo-500 text-white shadow transition">1.0x</button>
+          <button id="speedSlowBtn" onclick="setSpeed(0.75)" class="px-2.5 py-1 rounded text-indigo-200 hover:text-white transition">0.75x 慢速</button>
+        </div>
+
+        <!-- Submission Status -->
+        <button onclick="openFullSubmitModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-4 py-1.5 rounded-lg shadow transition flex items-center gap-1.5 text-sm">
+          <i class="fa-solid fa-flag-checkered"></i>
+          <span>交卷結算</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stage Navigation Tabs -->
+    <div class="bg-indigo-700/60 border-t border-indigo-500/30 overflow-x-auto">
+      <div class="max-w-6xl mx-auto px-4 flex space-x-1 sm:space-x-2 py-2" id="stageTabsContainer">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-6xl mx-auto px-4 py-6 flex-grow w-full">
+    
+    <!-- Student Header & Notice -->
+    <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="text-indigo-600 bg-indigo-50 p-3 rounded-xl text-xl">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <span class="text-xs text-slate-500 font-medium">應試者身分</span>
+          <div class="flex items-center gap-2 mt-0.5">
+            <input type="text" id="studentNameInput" placeholder="請輸入姓名 / 座號" value="學生自主練習" class="font-bold text-slate-700 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-sm focus:outline-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- Live score meter indicator -->
+      <div class="flex items-center gap-4 text-sm">
+        <div class="text-right">
+          <div class="text-xs text-slate-500">目前累計完成進度</div>
+          <div class="font-bold text-slate-700"><span id="answeredCountBadge">0</span> / 38 題</div>
+        </div>
+        <div class="w-24 sm:w-32 bg-slate-200 h-2.5 rounded-full overflow-hidden">
+          <div id="examProgressBar" class="bg-indigo-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Content Area (Injected via JS) -->
+    <div id="stageContainer" class="min-h-[500px]">
+      <!-- Dynamic Stage Cards -->
+    </div>
+
+    <!-- Stage Control Footer -->
+    <div class="mt-8 flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm no-print">
+      <button id="prevStageBtn" onclick="changeStage(currentStage - 1)" class="px-4 py-2 rounded-lg font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-arrow-left"></i> 上一關
+      </button>
+
+      <div class="flex gap-2">
+        <button id="checkCurrentStageBtn" onclick="checkCurrentStageAnswers()" class="px-5 py-2 rounded-lg font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition flex items-center gap-2">
+          <i class="fa-solid fa-spell-check"></i> 即時檢核本關
+        </button>
+        <button id="nextStageBtn" onclick="changeStage(currentStage + 1)" class="px-5 py-2 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md transition flex items-center gap-2">
+          下一關 <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Full Exam Summary / Diagnostic Modal -->
+  <div id="reportModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl my-8 relative max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Close Button -->
+      <button onclick="closeReportModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-2 text-xl no-print">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="text-center pb-4 border-b border-slate-100">
+        <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-wider mb-2">Final Diagnostic Assessment</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">🎉 聽力測驗全卷結算與素養診斷報告</h2>
+        <p class="text-slate-500 text-sm mt-1" id="reportStudentMeta"></p>
+      </div>
+
+      <!-- Score Banner -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+        <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-2xl p-5 text-white flex flex-col justify-center items-center text-center shadow-md">
+          <span class="text-indigo-200 text-sm font-semibold">測驗總得分 (滿分100)</span>
+          <div class="text-5xl font-black my-2" id="finalTotalScore">0</div>
+          <span class="text-xs bg-white/20 px-3 py-1 rounded-full font-medium" id="finalScoreGrade">評等計算中</span>
+        </div>
+
+        <div class="md:col-span-2 bg-slate-50 rounded-2xl p-5 border border-slate-200/80 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold text-slate-700 text-sm flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-column text-indigo-600"></i> 各關卡得分明細表
+            </h4>
+            <span class="text-xs text-slate-400 font-mono">100% 精準權重對齊</span>
+          </div>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-xs" id="stageScoresBreakdown">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Radar / Competency Section -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 items-center">
+        <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col items-center">
+          <h4 class="font-bold text-slate-700 text-sm mb-2 self-start flex items-center gap-2">
+            <i class="fa-solid fa-bullseye text-indigo-500"></i> 四維度英語聽力素養診斷
+          </h4>
+          <div class="w-full max-w-[280px] h-[260px] flex items-center justify-center">
+            <canvas id="competencyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3" id="actionableTipsContainer">
+          <!-- Dynamic Actionable Advice -->
+        </div>
+      </div>
+
+      <!-- Action Footer for Modal -->
+      <div class="pt-4 border-t border-slate-100 flex flex-wrap justify-end gap-3 no-print">
+        <button onclick="window.print()" class="px-5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-700 hover:bg-slate-50 transition flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-print"></i> 列印 / 另存學習檔案 (PDF)
+        </button>
+        <button onclick="closeReportModal()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold text-white transition text-sm shadow">
+          返回檢視題目與訂正
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Toast Component -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-20 opacity-0 transition duration-300 pointer-events-none">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <span id="toastMsg" class="text-sm font-medium">提示訊息</span>
+  </div>
+
+  <footer class="text-center py-4 text-xs text-slate-400 no-print border-t border-slate-200 mt-auto">
+    Super Fun 6 · Unit 2: What Time Do You Get Up? 數位素養聽力互動試題系統
+  </footer>
+
+  <script>
+    // ==========================================
+    // 1. DATA SCHEMA & CURRICULUM DEFINITION
+    // ==========================================
+    let currentSpeechRate = 1.0;
+    let currentStage = 0;
+    let competencyChartInstance = null;
+
+    // Define all 6 Stages strictly aligned to 100 points
+    const STAGES_CONFIG = [
+      {
+        id: "stage1",
+        number: 1,
+        title: "第一關：語音辨析 (O/X)",
+        subtitle: "仔細聽發音，空格中字母代表音相同畫 O，不同畫 X",
+        weightDesc: "每題 2 分，共 8 題 (滿分 16 分)",
+        totalQuestions: 8,
+        pointPerQ: 2,
+        totalPoints: 16,
+        category: "phonics"
+      },
+      {
+        id: "stage2",
+        number: 2,
+        title: "第二關：聽音拼字 (單字選擇)",
+        subtitle: "依提示聽語音，選出發音正確的單字",
+        weightDesc: "每題 4 分，共 5 題 (滿分 20 分)",
+        totalQuestions: 5,
+        pointPerQ: 4,
+        totalPoints: 20,
+        category: "phonics"
+      },
+      {
+        id: "stage3",
+        number: 3,
+        title: "第三關：作息片語辨識",
+        subtitle: "仔細聽動作片語，選出正確的日常生活選項",
+        weightDesc: "每題 2 分，共 7 題 (滿分 14 分)",
+        totalQuestions: 7,
+        pointPerQ: 2,
+        totalPoints: 14,
+        category: "vocab"
+      },
+      {
+        id: "stage4",
+        number: 4,
+        title: "第四關：時間情境相符判定",
+        subtitle: "聽句子描述與作息時間圖，相符畫 O，不符畫 X",
+        weightDesc: "每題 2.5 分，共 8 題 (滿分 20 分)",
+        totalQuestions: 8,
+        pointPerQ: 2.5,
+        totalPoints: 20,
+        category: "context"
+      },
+      {
+        id: "stage5",
+        number: 5,
+        title: "第五關：作息問答對話檢核",
+        subtitle: "仔細聽問句，依情境鐘面圖意勾選正確的回應句 (A 或 B)",
+        weightDesc: "每題 3 分，共 4 題 (滿分 12 分)",
+        totalQuestions: 4,
+        pointPerQ: 3,
+        totalPoints: 12,
+        category: "dialogue"
+      },
+      {
+        id: "stage6",
+        number: 6,
+        title: "第六關：生活情境配對題",
+        subtitle: "聽句子與 Henry 的作息敘述，將作息代碼配對至時鐘",
+        weightDesc: "每格 3 分，共 6 題 (滿分 18 分)",
+        totalQuestions: 6,
+        pointPerQ: 3,
+        totalPoints: 18,
+        category: "context"
+      }
+    ];
+
+    // Detailed question data
+    const QUESTIONS_DATA = {
+      stage1: [
+        { id: "s1_q1", prompt: "ca__ ; wi__", tts: "catch, wish", expected: "X", hint: "catch 發 /tʃ/，wish 發 /ʃ/，發音不同 (X)" },
+        { id: "s1_q2", prompt: "mu__ ; bu__", tts: "much, bush", expected: "X", hint: "much 發 /tʃ/，bush 發 /ʃ/，發音不同 (X)" },
+        { id: "s1_q3", prompt: "__op ; __ip", tts: "chop, chip", expected: "O", hint: "chop 與 chip 均發 /tʃ/，發音相同 (O)" },
+        { id: "s1_q4", prompt: "__irt ; __ell", tts: "shirt, shell", expected: "O", hint: "shirt 與 shell 均發 /ʃ/，發音相同 (O)" },
+        { id: "s1_q5", prompt: "dol__in ; ele__ant", tts: "dolphin, elephant", expected: "O", hint: "dolphin 與 elephant 中的 ph 都發 /f/，發音相同 (O)" },
+        { id: "s1_q6", prompt: "__ite ; __ale", tts: "white, whale", expected: "O", hint: "white 與 whale 中的 wh 均發 /hw/ 或 /w/，發音相同 (O)" },
+        { id: "s1_q7", prompt: "__one ; __ine", tts: "phone, shine", expected: "X", hint: "phone 發 /f/，shine 發 /ʃ/，發音不同 (X)" },
+        { id: "s1_q8", prompt: "__air ; __ill", tts: "chair, ship", expected: "X", hint: "chair 發 /tʃ/，ship 發 /ʃ/，發音不同 (X)" }
+      ],
+
+      stage2: [
+        { id: "s2_q1", pair: ["cash", "catch"], tts: "catch", expected: "catch", hint: "聽到的音帶有爆破切音 /tʃ/ -> catch" },
+        { id: "s2_q2", pair: ["dish", "ditch"], tts: "dish", expected: "dish", hint: "尾音是柔和的 /ʃ/ -> dish" },
+        { id: "s2_q3", pair: ["cheap", "sheep"], tts: "sheep", expected: "sheep", hint: "開頭音是摩擦音 /ʃ/ -> sheep" },
+        { id: "s2_q4", pair: ["photo", "motto"], tts: "photo", expected: "photo", hint: "開頭音是 /f/ -> photo" },
+        { id: "s2_q5", pair: ["white", "write"], tts: "white", expected: "white", hint: "單字為白色的 white (/waɪt/)" }
+      ],
+
+      stage3: [
+        { id: "s3_q1", options: ["clean up", "go home", "get up"], tts: "get up", expected: 2, icon: "fa-sun" },
+        { id: "s3_q2", options: ["go home", "go to bed", "go to school"], tts: "go to school", expected: 2, icon: "fa-school" },
+        { id: "s3_q3", options: ["get up", "go home", "do homework"], tts: "do homework", expected: 2, icon: "fa-book-open" },
+        { id: "s3_q4", options: ["eat lunch", "eat dinner", "take a shower"], tts: "take a shower", expected: 2, icon: "fa-shower" },
+        { id: "s3_q5", options: ["do homework", "do the dishes", "go home"], tts: "do the dishes", expected: 1, icon: "fa-soap" },
+        { id: "s3_q6", options: ["go to school", "do homework", "take a shower"], tts: "go to school", expected: 0, icon: "fa-bus" },
+        { id: "s3_q7", options: ["go to bed", "go home", "get up"], tts: "go to bed", expected: 0, icon: "fa-bed" }
+      ],
+
+      stage4: [
+        { id: "s4_q1", timeText: "04:30 PM", visual: "放學回家 (Go home)", tts: "I go home at four thirty in the afternoon.", expected: "O", hint: "錄音說 4:30 PM go home，與圖片相符 (O)" },
+        { id: "s4_q2", timeText: "07:45 AM", visual: "吃早餐 (Eat breakfast)", tts: "I go to bed at seven forty-five.", expected: "X", hint: "錄音說 go to bed (上床睡覺)，圖片為早上吃早餐，不符 (X)" },
+        { id: "s4_q3", timeText: "07:35 AM", visual: "起床 (Get up)", tts: "He gets up at seven thirty-five.", expected: "O", hint: "錄音說 7:35 起床，與圖意相符 (O)" },
+        { id: "s4_q4", timeText: "08:20 PM", visual: "吃晚餐 (Eat dinner)", tts: "I eat lunch at twelve o'clock.", expected: "X", hint: "錄音說 12:00 吃午餐，圖面是 08:20 吃晚餐，不符 (X)" },
+        { id: "s4_q5", timeText: "04:50 PM", visual: "學校門口放學 (Go home)", tts: "They go home at four fifty.", expected: "O", hint: "時間 04:50 與離開學校回家相符 (O)" },
+        { id: "s4_q6", timeText: "06:20 AM", visual: "起床伸懶腰 (Get up)", tts: "She gets up at six twenty in the morning.", expected: "O", hint: "6:20 AM 起床與圖意相符 (O)" },
+        { id: "s4_q7", timeText: "11:50 AM", visual: "午餐時間 (Eat lunch)", tts: "I take a shower at eleven fifty.", expected: "X", hint: "錄音說洗澡，圖面為吃午餐，不符 (X)" },
+        { id: "s4_q8", timeText: "06:35 PM", visual: "吃晚餐 (Eat dinner)", tts: "I eat dinner at six thirty-five in the evening.", expected: "O", hint: "晚間 6:35 吃晚餐與圖意相符 (O)" }
+      ],
+
+      stage5: [
+        { 
+          id: "s5_q1", 
+          time: "07:35 AM", 
+          iconVisual: "起床 (Morning sun)", 
+          tts: "What time do you get up?", 
+          optA: "A: I get up at seven thirty-five.", 
+          optB: "B: I go to school at seven thirty-five.", 
+          expected: "A",
+          hint: "問句為起床時間，圖意也是起床，選 A。"
+        },
+        { 
+          id: "s5_q2", 
+          time: "06:00 AM ➔ 05:00 PM", 
+          iconVisual: "早晨起床 ➔ 下午放學", 
+          tts: "What time does he go home?", 
+          optA: "A: He gets up at six o'clock.", 
+          optB: "B: He goes home at five o'clock.", 
+          expected: "B",
+          hint: "問句詢問何時回家 (go home)，應選 05:00 的 B。"
+        },
+        { 
+          id: "s5_q3", 
+          time: "04:50 PM", 
+          iconVisual: "走出校門回家", 
+          tts: "What time do you go home?", 
+          optA: "A: I go home at four fifty.", 
+          optB: "B: I do my homework at four fifty.", 
+          expected: "A",
+          hint: "學生離開校舍，圖意為放學回家，選 A。"
+        },
+        { 
+          id: "s5_q4", 
+          time: "05:45 PM ➔ 08:15 PM", 
+          iconVisual: "吃晚餐 ➔ 檯燈下寫作業", 
+          tts: "What time do you do your homework?", 
+          optA: "A: I eat dinner at five forty-five.", 
+          optB: "B: I do my homework at eight fifteen.", 
+          expected: "B",
+          hint: "題目詢問做功課時間 (do homework)，對應 08:15 的 B。"
+        }
+      ],
+
+      stage6: [
+        // Part 1: Routine Matching
+        {
+          id: "s6_p1_1",
+          part: 1,
+          timeLabel: "4:20 PM",
+          tts: "At four twenty in the afternoon, I clean up my desk.",
+          expected: "b",
+          hint: "4:20 PM 對應 (b) 整理清潔工作"
+        },
+        {
+          id: "s6_p1_2",
+          part: 1,
+          timeLabel: "5:30 PM",
+          tts: "At five thirty, I take a shower.",
+          expected: "d",
+          hint: "5:30 PM 對應 (d) 洗澡沐浴"
+        },
+        {
+          id: "s6_p1_3",
+          part: 1,
+          timeLabel: "6:35 PM",
+          tts: "I eat dinner with my family at six thirty-five.",
+          expected: "a",
+          hint: "6:35 PM 對應 (a) 吃美味晚餐"
+        },
+        // Part 2: Henry's Routine
+        {
+          id: "s6_p2_1",
+          part: 2,
+          timeLabel: "5:25 PM",
+          tts: "Hi, I am Henry. I do my homework at five twenty-five.",
+          expected: "a",
+          hint: "Henry 在 5:25 PM 做功課 (a)"
+        },
+        {
+          id: "s6_p2_2",
+          part: 2,
+          timeLabel: "6:30 PM",
+          tts: "Then, I eat dinner at six thirty.",
+          expected: "b",
+          hint: "Henry 在 6:30 PM 吃晚飯 (b)"
+        },
+        {
+          id: "s6_p2_3",
+          part: 2,
+          timeLabel: "9:40 PM",
+          tts: "Finally, I go to bed at nine forty at night.",
+          expected: "c",
+          hint: "Henry 在 9:40 PM 上床睡覺 (c)"
+        }
+      ]
+    };
+
+    // User response state store
+    const userAnswers = {
+      stage1: {},
+      stage2: {},
+      stage3: {},
+      stage4: {},
+      stage5: {},
+      stage6: {}
+    };
+
+    // Stage Checked flags
+    const stageCheckedState = [false, false, false, false, false, false];
+
+    // ==========================================
+    // 2. AUDIO (SPEECH SYNTHESIS) ENGINE
+    // ==========================================
+    function setSpeed(rate) {
+      currentSpeechRate = rate;
+      const normalBtn = document.getElementById("speedNormalBtn");
+      const slowBtn = document.getElementById("speedSlowBtn");
+      if (rate === 1.0) {
+        normalBtn.className = "px-2.5 py-1 rounded bg-indigo-500 text-white shadow transition";
+        slowBtn.className = "px-2.5 py-1 rounded text-indigo-200 hover:text-white transition";
+      } else {
+        slowBtn.className = "px-2.5 py-1 rounded bg-amber-500 text-slate-900 font-bold shadow transition";
+        normalBtn.className = "px-2.5 py-1 rounded text-indigo-200 hover:text-white transition";
+      }
+      showToast(`語速已切換為 ${rate}x`);
+    }
+
+    function playAudio(text) {
+      if (!('speechSynthesis' in window)) {
+        showToast("您的瀏覽器不支援語音合成功能，建議使用 Chrome / Edge。");
+        return;
+      }
+      window.speechSynthesis.cancel(); // Stop current playing speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = currentSpeechRate;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // ==========================================
+    // 3. UI RENDERING & TAB NAVIGATION
+    // ==========================================
+    function initTabs() {
+      const container = document.getElementById("stageTabsContainer");
+      container.innerHTML = STAGES_CONFIG.map((stage, idx) => `
+        <button onclick="changeStage(${idx})" id="tab-btn-${idx}" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 ${idx === 0 ? 'bg-white text-indigo-700 shadow-sm' : 'text-indigo-200 hover:bg-indigo-600/50 hover:text-white'}">
+          <span class="w-5 h-5 rounded-full ${idx === 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-800 text-indigo-200'} text-[10px] flex items-center justify-center font-bold">${stage.number}</span>
+          <span>第 ${stage.number} 關</span>
+          <span id="tab-badge-${idx}" class="hidden w-2 h-2 rounded-full bg-emerald-400"></span>
+        </button>
+      `).join('');
+    }
+
+    function changeStage(newIndex) {
+      if (newIndex < 0 || newIndex >= STAGES_CONFIG.length) return;
+      currentStage = newIndex;
+
+      // Update tabs UI
+      STAGES_CONFIG.forEach((_, idx) => {
+        const btn = document.getElementById(`tab-btn-${idx}`);
+        if (!btn) return;
+        if (idx === currentStage) {
+          btn.className = "whitespace-nowrap px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 bg-white text-indigo-700 shadow-sm";
+          btn.children[0].className = "w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center font-bold";
+        } else {
+          btn.className = "whitespace-nowrap px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 text-indigo-200 hover:bg-indigo-600/50 hover:text-white";
+          btn.children[0].className = "w-5 h-5 rounded-full bg-indigo-800 text-indigo-200 text-[10px] flex items-center justify-center font-bold";
+        }
+      });
+
+      // Update prev/next button states
+      document.getElementById("prevStageBtn").disabled = (currentStage === 0);
+      const nextBtn = document.getElementById("nextStageBtn");
+      if (currentStage === STAGES_CONFIG.length - 1) {
+        nextBtn.innerHTML = `<span>檢視成績結算</span> <i class="fa-solid fa-flag-checkered"></i>`;
+        nextBtn.onclick = openFullSubmitModal;
+      } else {
+        nextBtn.innerHTML = `<span>下一關</span> <i class="fa-solid fa-arrow-right"></i>`;
+        nextBtn.onclick = () => changeStage(currentStage + 1);
+      }
+
+      renderStageContent();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderStageContent() {
+      const container = document.getElementById("stageContainer");
+      const stage = STAGES_CONFIG[currentStage];
+      const isChecked = stageCheckedState[currentStage];
+
+      let headerHtml = `
+        <div class="mb-6 flex flex-wrap justify-between items-end gap-3 pb-4 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md text-xs font-bold bg-indigo-100 text-indigo-700">關卡 ${stage.number} / 6</span>
+              <span class="text-xs text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200/60 font-semibold">${stage.weightDesc}</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-800 mt-1">${stage.title}</h2>
+            <p class="text-sm text-slate-500">${stage.subtitle}</p>
+          </div>
+          ${isChecked ? '<span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1"><i class="fa-solid fa-check"></i> 本關已檢核</span>' : ''}
+        </div>
+      `;
+
+      let bodyHtml = "";
+
+      // STAGE 1: O or X Phonics
+      if (currentStage === 0) {
+        const list = QUESTIONS_DATA.stage1;
+        bodyHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">` + list.map((q, idx) => {
+          const selected = userAnswers.stage1[q.id];
+          const isCorrect = selected === q.expected;
+          return `
+            <div class="bg-white rounded-2xl p-4 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200/90'} shadow-sm flex flex-col justify-between">
+              <div class="flex justify-between items-center mb-3">
+                <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs">${idx + 1}</span>
+                <button onclick="playAudio('${q.tts}')" class="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1.5 border border-indigo-100">
+                  <i class="fa-solid fa-volume-high text-indigo-500"></i> 播放發音
+                </button>
+              </div>
+
+              <div class="text-center py-2">
+                <div class="text-2xl font-mono font-bold tracking-wider text-slate-700">${q.prompt}</div>
+                <div class="text-xs text-slate-400 mt-1">聽聽看兩者發音音素</div>
+              </div>
+
+              <!-- Options O / X -->
+              <div class="grid grid-cols-2 gap-3 mt-3">
+                <button onclick="selectAnswer('stage1', '${q.id}', 'O')" class="py-2.5 rounded-xl font-black text-lg transition flex items-center justify-center gap-2 border-2 ${selected === 'O' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}">
+                  <i class="fa-regular fa-circle text-emerald-500"></i> 相同 (O)
+                </button>
+                <button onclick="selectAnswer('stage1', '${q.id}', 'X')" class="py-2.5 rounded-xl font-black text-lg transition flex items-center justify-center gap-2 border-2 ${selected === 'X' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'}">
+                  <i class="fa-solid fa-xmark text-rose-500"></i> 不同 (X)
+                </button>
+              </div>
+
+              ${isChecked ? `
+                <div class="mt-3 pt-2 border-t border-slate-100 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                  ${isCorrect ? '✓ 正確！' : `✕ 答案為「${q.expected}」。解析：${q.hint}`}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+
+      // STAGE 2: Write/Choose Phonics
+      else if (currentStage === 1) {
+        const list = QUESTIONS_DATA.stage2;
+        bodyHtml = `
+          <!-- Word Bank with significantly enlarged typography & padding -->
+          <div class="bg-indigo-50/90 border-2 border-indigo-200 rounded-3xl p-5 sm:p-6 mb-7 text-center shadow-sm">
+            <div class="flex items-center justify-center gap-2 mb-3">
+              <i class="fa-solid fa-lightbulb text-amber-500 text-lg sm:text-xl"></i>
+              <span class="text-sm sm:text-base font-extrabold text-indigo-700 tracking-wider">Word Bank 提示單字庫</span>
+            </div>
+            <div class="flex flex-wrap justify-center gap-3 sm:gap-4">
+              <span class="bg-white px-4 py-2 rounded-2xl border-2 border-indigo-200/90 text-indigo-950 font-black text-lg sm:text-xl md:text-2xl tracking-wide shadow-sm">cash / catch</span>
+              <span class="bg-white px-4 py-2 rounded-2xl border-2 border-indigo-200/90 text-indigo-950 font-black text-lg sm:text-xl md:text-2xl tracking-wide shadow-sm">dish / ditch</span>
+              <span class="bg-white px-4 py-2 rounded-2xl border-2 border-indigo-200/90 text-indigo-950 font-black text-lg sm:text-xl md:text-2xl tracking-wide shadow-sm">cheap / sheep</span>
+              <span class="bg-white px-4 py-2 rounded-2xl border-2 border-indigo-200/90 text-indigo-950 font-black text-lg sm:text-xl md:text-2xl tracking-wide shadow-sm">photo / motto</span>
+              <span class="bg-white px-4 py-2 rounded-2xl border-2 border-indigo-200/90 text-indigo-950 font-black text-lg sm:text-xl md:text-2xl tracking-wide shadow-sm">white / write</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        ` + list.map((q, idx) => {
+          const selected = userAnswers.stage2[q.id];
+          const isCorrect = selected === q.expected;
+          return `
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border-2 ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/30 ring-2 ring-emerald-300/40' : 'border-rose-400 bg-rose-50/30 ring-2 ring-rose-300/40') : 'border-slate-200'} shadow-sm flex flex-col justify-between transition-all">
+              <div>
+                <div class="flex justify-between items-center mb-4">
+                  <span class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 font-black flex items-center justify-center text-base sm:text-lg shadow-inner">${idx + 1}</span>
+                  <button onclick="playAudio('${q.tts}')" class="px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm sm:text-base font-extrabold transition flex items-center gap-2 border-2 border-indigo-200 shadow-sm active:scale-95">
+                    <i class="fa-solid fa-volume-high text-base sm:text-lg"></i> 播放發音
+                  </button>
+                </div>
+
+                <p class="text-sm sm:text-base font-bold text-slate-600 text-center mb-4">聽一聽，點選聽到的單字：</p>
+
+                <!-- High-contrast Extra Large Word Option Buttons -->
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 my-2">
+                  ${q.pair.map(word => `
+                    <button onclick="selectAnswer('stage2', '${q.id}', '${word}')" class="py-4 sm:py-5 px-3 rounded-2xl font-black text-2xl sm:text-3xl tracking-wide transition-all border-2 text-center flex items-center justify-center ${selected === word ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-400/50 shadow-md transform scale-[1.02]' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-800 shadow-sm hover:border-indigo-300'}">
+                      ${word}
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+
+              ${isChecked ? `
+                <div class="mt-4 pt-3 border-t border-slate-100 text-sm font-bold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                  ${isCorrect ? '✓ 答對了！' : `✕ 正確單字為「${q.expected}」。提示：${q.hint}`}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+
+      // STAGE 3: Vocab Routine Multiple Choice
+      else if (currentStage === 2) {
+        const list = QUESTIONS_DATA.stage3;
+        bodyHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">` + list.map((q, idx) => {
+          const selected = userAnswers.stage3[q.id];
+          const isCorrect = selected === q.expected;
+          return `
+            <div class="bg-white rounded-2xl p-4 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200'} shadow-sm">
+              <div class="flex justify-between items-center mb-3">
+                <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs">${idx + 1}</span>
+                <button onclick="playAudio('${q.tts}')" class="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1.5 border border-indigo-100">
+                  <i class="fa-solid fa-volume-high"></i> 播放作息片語
+                </button>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                ${q.options.map((opt, optIdx) => `
+                  <button onclick="selectAnswer('stage3', '${q.id}', ${optIdx})" class="p-2.5 rounded-xl text-left text-sm font-semibold border-2 transition flex items-center justify-between ${selected === optIdx ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}">
+                    <span class="flex items-center gap-2">
+                      <span class="w-5 h-5 rounded-full ${selected === optIdx ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'} text-xs flex items-center justify-center font-bold">${optIdx + 1}</span>
+                      <span>${opt}</span>
+                    </span>
+                    <i class="fa-solid ${selected === optIdx ? 'fa-circle-check text-indigo-600' : 'fa-circle text-slate-300'} text-xs"></i>
+                  </button>
+                `).join('')}
+              </div>
+
+              ${isChecked ? `
+                <div class="mt-3 pt-2 border-t border-slate-100 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                  ${isCorrect ? '✓ 辨析正確！' : `✕ 正確為：(${q.expected + 1}) ${q.options[q.expected]}`}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+
+      // STAGE 4: Time Routine Situations O/X
+      else if (currentStage === 3) {
+        const list = QUESTIONS_DATA.stage4;
+        bodyHtml = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">` + list.map((q, idx) => {
+          const selected = userAnswers.stage4[q.id];
+          const isCorrect = selected === q.expected;
+          return `
+            <div class="bg-white rounded-2xl p-4 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200'} shadow-sm flex flex-col justify-between">
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs">${idx + 1}</span>
+                  <button onclick="playAudio('${q.tts}')" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1 border border-indigo-100">
+                    <i class="fa-solid fa-volume-high"></i> 播放
+                  </button>
+                </div>
+
+                <!-- Clock Visual Card -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 my-2 text-center">
+                  <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 text-emerald-400 font-mono text-xl font-bold tracking-widest shadow-inner">
+                    <i class="fa-regular fa-clock text-xs text-slate-400"></i> ${q.timeText}
+                  </div>
+                  <div class="text-xs font-bold text-slate-600 mt-2 flex items-center justify-center gap-1">
+                    <i class="fa-regular fa-image text-slate-400"></i> 圖意：${q.visual}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                  <button onclick="selectAnswer('stage4', '${q.id}', 'O')" class="py-2 rounded-xl font-black text-sm transition flex items-center justify-center gap-1 border-2 ${selected === 'O' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}">
+                    <i class="fa-regular fa-circle text-emerald-500"></i> 相符 (O)
+                  </button>
+                  <button onclick="selectAnswer('stage4', '${q.id}', 'X')" class="py-2 rounded-xl font-black text-sm transition flex items-center justify-center gap-1 border-2 ${selected === 'X' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}">
+                    <i class="fa-solid fa-xmark text-rose-500"></i> 不符 (X)
+                  </button>
+                </div>
+
+                ${isChecked ? `
+                  <div class="mt-2 pt-2 border-t border-slate-100 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                    ${isCorrect ? '✓ 正確！' : `✕ ${q.hint}`}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+
+      // STAGE 5: Question Response (Check A / B)
+      else if (currentStage === 4) {
+        const list = QUESTIONS_DATA.stage5;
+        bodyHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-5">` + list.map((q, idx) => {
+          const selected = userAnswers.stage5[q.id];
+          const isCorrect = selected === q.expected;
+          return `
+            <div class="bg-white rounded-2xl p-5 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200'} shadow-sm">
+              <div class="flex justify-between items-center mb-3">
+                <span class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs">${idx + 1}</span>
+                <button onclick="playAudio('${q.tts}')" class="px-3 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1.5 border border-indigo-100">
+                  <i class="fa-solid fa-volume-high"></i> 播放問句
+                </button>
+              </div>
+
+              <!-- Situation Info Card -->
+              <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-base font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">${q.time}</span>
+                  <span class="text-xs text-slate-500">${q.iconVisual}</span>
+                </div>
+                <span class="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2 py-0.5 rounded">聽音選句</span>
+              </div>
+
+              <div class="flex flex-col gap-2.5">
+                <button onclick="selectAnswer('stage5', '${q.id}', 'A')" class="p-3 rounded-xl text-left text-sm font-semibold border-2 transition flex items-center justify-between ${selected === 'A' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}">
+                  <span>${q.optA}</span>
+                  <i class="fa-solid ${selected === 'A' ? 'fa-square-check text-indigo-600' : 'fa-square text-slate-300'}"></i>
+                </button>
+                <button onclick="selectAnswer('stage5', '${q.id}', 'B')" class="p-3 rounded-xl text-left text-sm font-semibold border-2 transition flex items-center justify-between ${selected === 'B' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:bg-slate-50 text-slate-700'}">
+                  <span>${q.optB}</span>
+                  <i class="fa-solid ${selected === 'B' ? 'fa-square-check text-indigo-600' : 'fa-square text-slate-300'}"></i>
+                </button>
+              </div>
+
+              ${isChecked ? `
+                <div class="mt-3 pt-2 border-t border-slate-100 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                  ${isCorrect ? '✓ 回應精準！' : `✕ 應選擇 (${q.expected})。${q.hint}`}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('') + `</div>`;
+      }
+
+      // STAGE 6: Matching Activity
+      else if (currentStage === 5) {
+        const list = QUESTIONS_DATA.stage6;
+        const part1Items = list.filter(item => item.part === 1);
+        const part2Items = list.filter(item => item.part === 2);
+
+        bodyHtml = `
+          <!-- Part 1 -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 font-bold text-xs flex items-center justify-center">1</span>
+              <h3 class="font-extrabold text-slate-800 text-base">日常作息代碼配對</h3>
+            </div>
+            
+            <!-- Code Reference Card -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 font-medium">
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(a)</span> <span>吃晚餐 (Dinner)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(b)</span> <span>整理收拾 (Clean up)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(c)</span> <span>做作業 (Homework)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(d)</span> <span>洗澡 (Take a shower)</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              ${part1Items.map((q, idx) => {
+                const selected = userAnswers.stage6[q.id];
+                const isCorrect = selected === q.expected;
+                return `
+                  <div class="bg-slate-50/70 rounded-xl p-3 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200'}">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-xs font-mono font-bold bg-slate-800 text-amber-300 px-2.5 py-0.5 rounded">${q.timeLabel}</span>
+                      <button onclick="playAudio('${q.tts}')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1 border border-slate-200 shadow-sm">
+                        <i class="fa-solid fa-volume-high"></i> 播放音檔
+                      </button>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <label class="text-xs text-slate-500 block mb-1">選擇對應作息代號：</label>
+                      <select onchange="selectAnswer('stage6', '${q.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-700 focus:outline-indigo-500">
+                        <option value="">-- 請選擇代碼 --</option>
+                        <option value="a" ${selected === 'a' ? 'selected' : ''}>(a) 吃晚餐</option>
+                        <option value="b" ${selected === 'b' ? 'selected' : ''}>(b) 整理收拾</option>
+                        <option value="c" ${selected === 'c' ? 'selected' : ''}>(c) 做作業</option>
+                        <option value="d" ${selected === 'd' ? 'selected' : ''}>(d) 洗澡</option>
+                      </select>
+                    </div>
+
+                    ${isChecked ? `
+                      <div class="mt-2 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                        ${isCorrect ? '✓ 配對正確！' : `✕ 應為 (${q.expected})。${q.hint}`}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Part 2: Henry's Schedule -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">2</span>
+              <h3 class="font-extrabold text-slate-800 text-base">Henry 的作息配對 (Henry's Schedule)</h3>
+            </div>
+
+            <!-- Code Reference Card -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 font-medium">
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(a)</span> <span>寫功課 (Do homework)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(b)</span> <span>吃晚餐 (Eat dinner)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(c)</span> <span>睡覺 (Go to bed)</span>
+              </div>
+              <div class="bg-white p-2 rounded-lg border border-slate-200 flex items-center gap-2">
+                <span class="font-bold text-indigo-600">(d)</span> <span>洗澡 (Take a shower)</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              ${part2Items.map((q, idx) => {
+                const selected = userAnswers.stage6[q.id];
+                const isCorrect = selected === q.expected;
+                return `
+                  <div class="bg-slate-50/70 rounded-xl p-3 border ${isChecked ? (isCorrect ? 'border-emerald-400 bg-emerald-50/20' : 'border-rose-400 bg-rose-50/20') : 'border-slate-200'}">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-xs font-mono font-bold bg-indigo-900 text-emerald-400 px-2.5 py-0.5 rounded">${q.timeLabel}</span>
+                      <button onclick="playAudio('${q.tts}')" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-indigo-600 text-xs font-bold transition flex items-center gap-1 border border-slate-200 shadow-sm">
+                        <i class="fa-solid fa-volume-high"></i> 聽 Henry 說
+                      </button>
+                    </div>
+                    
+                    <div class="mt-3">
+                      <label class="text-xs text-slate-500 block mb-1">對應 Henry 的作息：</label>
+                      <select onchange="selectAnswer('stage6', '${q.id}', this.value)" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-sm font-bold text-slate-700 focus:outline-indigo-500">
+                        <option value="">-- 請選擇代碼 --</option>
+                        <option value="a" ${selected === 'a' ? 'selected' : ''}>(a) 寫功課</option>
+                        <option value="b" ${selected === 'b' ? 'selected' : ''}>(b) 吃晚餐</option>
+                        <option value="c" ${selected === 'c' ? 'selected' : ''}>(c) 睡覺</option>
+                        <option value="d" ${selected === 'd' ? 'selected' : ''}>(d) 洗澡</option>
+                      </select>
+                    </div>
+
+                    ${isChecked ? `
+                      <div class="mt-2 text-xs font-semibold ${isCorrect ? 'text-emerald-700' : 'text-rose-600'}">
+                        ${isCorrect ? '✓ 配對正確！' : `✕ 應為 (${q.expected})。${q.hint}`}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = headerHtml + bodyHtml;
+      updateProgressBar();
+    }
+
+    // ==========================================
+    // 4. ANSWER HANDLING & SCORE CALCULATION
+    // ==========================================
+    function selectAnswer(stageKey, questionId, val) {
+      userAnswers[stageKey][questionId] = val;
+      renderStageContent();
+      updateProgressBar();
+    }
+
+    function checkCurrentStageAnswers() {
+      stageCheckedState[currentStage] = true;
+      const stage = STAGES_CONFIG[currentStage];
+      const stageKey = stage.id;
+      const answeredInStage = Object.keys(userAnswers[stageKey]).length;
+      
+      renderStageContent();
+      showToast(`已完成第 ${currentStage + 1} 關即時檢核！已作答 ${answeredInStage} / ${stage.totalQuestions} 題`);
+    }
+
+    function calculateScores() {
+      let totalScore = 0;
+      let stageResults = [];
+      let totalAnswered = 0;
+
+      // Category points tracking for Diagnostic Radar
+      const competency = {
+        phonics: { correct: 0, total: 36 },     // Stage 1 (16) + Stage 2 (20)
+        vocab: { correct: 0, total: 14 },       // Stage 3 (14)
+        dialogue: { correct: 0, total: 12 },    // Stage 5 (12)
+        context: { correct: 0, total: 38 }      // Stage 4 (20) + Stage 6 (18)
+      };
+
+      STAGES_CONFIG.forEach((stage, idx) => {
+        const key = stage.id;
+        const qList = QUESTIONS_DATA[key];
+        let correctCount = 0;
+
+        qList.forEach(q => {
+          if (userAnswers[key][q.id] !== undefined && userAnswers[key][q.id] !== "") {
+            totalAnswered++;
+          }
+          if (userAnswers[key][q.id] === q.expected) {
+            correctCount++;
+          }
+        });
+
+        // Exact strict points calculation to prevent 36/24 overflows
+        const earnedPoints = Number((correctCount * stage.pointPerQ).toFixed(1));
+        totalScore += earnedPoints;
+
+        // Categorize into competencies
+        if (idx === 0 || idx === 1) competency.phonics.correct += earnedPoints;
+        else if (idx === 2) competency.vocab.correct += earnedPoints;
+        else if (idx === 3 || idx === 5) competency.context.correct += earnedPoints;
+        else if (idx === 4) competency.dialogue.correct += earnedPoints;
+
+        stageResults.push({
+          stageNumber: stage.number,
+          title: stage.title,
+          correctCount,
+          totalCount: stage.totalQuestions,
+          earnedPoints,
+          maxPoints: stage.totalPoints
+        });
+      });
+
+      return {
+        totalScore: Math.round(totalScore * 10) / 10,
+        totalAnswered,
+        stageResults,
+        competency
+      };
+    }
+
+    function updateProgressBar() {
+      let count = 0;
+      Object.keys(userAnswers).forEach(key => {
+        Object.keys(userAnswers[key]).forEach(qId => {
+          if (userAnswers[key][qId] !== undefined && userAnswers[key][qId] !== "") {
+            count++;
+          }
+        });
+      });
+      document.getElementById("answeredCountBadge").innerText = count;
+      const pct = Math.round((count / 38) * 100);
+      document.getElementById("examProgressBar").style.width = `${pct}%`;
+    }
+
+    // ==========================================
+    // 5. SUMMARY MODAL & DIAGNOSTIC REPORT
+    // ==========================================
+    function openFullSubmitModal() {
+      // Mark all stages as checked
+      for (let i = 0; i < stageCheckedState.length; i++) {
+        stageCheckedState[i] = true;
+      }
+      renderStageContent();
+
+      const studentName = document.getElementById("studentNameInput").value.trim() || "學生自主練習";
+      const { totalScore, stageResults, competency } = calculateScores();
+
+      document.getElementById("reportStudentMeta").innerText = `受試學生：${studentName} · 評定時間：${new Date().toLocaleDateString('zh-TW')} ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+      document.getElementById("finalTotalScore").innerText = totalScore;
+
+      // Grade badge logic
+      const gradeElem = document.getElementById("finalScoreGrade");
+      if (totalScore >= 90) {
+        gradeElem.innerText = "等級：A+ 精熟卓越 (Excellent)";
+        gradeElem.className = "text-xs bg-emerald-400 text-slate-900 font-extrabold px-3 py-1 rounded-full";
+      } else if (totalScore >= 80) {
+        gradeElem.innerText = "等級：A 基礎穩固 (Proficient)";
+        gradeElem.className = "text-xs bg-amber-300 text-slate-900 font-extrabold px-3 py-1 rounded-full";
+      } else if (totalScore >= 60) {
+        gradeElem.innerText = "等級：B 尚待加強 (Developing)";
+        gradeElem.className = "text-xs bg-amber-500 text-white font-extrabold px-3 py-1 rounded-full";
+      } else {
+        gradeElem.innerText = "等級：C 需個別化輔導 (Needs Scaffold)";
+        gradeElem.className = "text-xs bg-rose-500 text-white font-extrabold px-3 py-1 rounded-full";
+      }
+
+      // Render Stage breakdown list
+      const breakdownContainer = document.getElementById("stageScoresBreakdown");
+      breakdownContainer.innerHTML = stageResults.map(s => `
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
+          <div class="text-[11px] text-slate-400 font-bold">第 ${s.stageNumber} 關</div>
+          <div class="font-extrabold text-slate-700 text-sm my-0.5">${s.earnedPoints} <span class="text-[10px] text-slate-400">/ ${s.maxPoints}</span></div>
+          <div class="text-[10px] text-slate-500 font-medium">${s.correctCount}/${s.totalCount} 題</div>
+        </div>
+      `).join('');
+
+      // Render Radar / Competency Chart
+      renderCompetencyChart(competency);
+
+      // Render Actionable Learning Advice
+      renderActionableTips(competency);
+
+      // Show Modal
+      document.getElementById("reportModal").classList.remove("hidden");
+    }
+
+    function closeReportModal() {
+      document.getElementById("reportModal").classList.add("hidden");
+    }
+
+    function renderCompetencyChart(comp) {
+      const pPct = Math.round((comp.phonics.correct / comp.phonics.total) * 100);
+      const vPct = Math.round((comp.vocab.correct / comp.vocab.total) * 100);
+      const dPct = Math.round((comp.dialogue.correct / comp.dialogue.total) * 100);
+      const cPct = Math.round((comp.context.correct / comp.context.total) * 100);
+
+      const ctx = document.getElementById('competencyChart').getContext('2d');
+      if (competencyChartInstance) {
+        competencyChartInstance.destroy();
+      }
+
+      competencyChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['音韻辨析 (Phonics)', '片語抓取 (Vocab)', '句型對話 (Dialogue)', '情境推理 (Context)'],
+          datasets: [{
+            label: '素養達成率 (%)',
+            data: [pPct, vPct, dPct, cPct],
+            fill: true,
+            backgroundColor: 'rgba(99, 102, 241, 0.25)',
+            borderColor: 'rgb(79, 70, 229)',
+            pointBackgroundColor: 'rgb(79, 70, 229)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgb(79, 70, 229)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              angleLines: { color: '#e2e8f0' },
+              grid: { color: '#e2e8f0' },
+              suggestedMin: 0,
+              suggestedMax: 100,
+              ticks: { display: false, stepSize: 25 }
+            }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    function renderActionableTips(comp) {
+      const pPct = Math.round((comp.phonics.correct / comp.phonics.total) * 100);
+      const vPct = Math.round((comp.vocab.correct / comp.vocab.total) * 100);
+      const dPct = Math.round((comp.dialogue.correct / comp.dialogue.total) * 100);
+      const cPct = Math.round((comp.context.correct / comp.context.total) * 100);
+
+      const tipsContainer = document.getElementById("actionableTipsContainer");
+      let tipsHtml = `<h4 class="font-bold text-slate-700 text-sm flex items-center gap-2 mb-1"><i class="fa-solid fa-lightbulb text-amber-500"></i> 個別化行動學習建議 (Actionable Advice)</h4>`;
+
+      // Phonics tip
+      if (pPct < 85) {
+        tipsHtml += `
+          <div class="bg-amber-50 border border-amber-200/70 p-3 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+            <i class="fa-solid fa-ear-listen text-amber-600 mt-0.5"></i>
+            <div>
+              <strong>音韻辨析弱項提示：</strong> 注意 /tʃ/ (如 catch, chip) 帶有舌尖先抵住上顎的爆破摩擦感，而 /ʃ/ (如 wish, ship) 則是持續的噓聲氣音；可對著鏡子練習口型。
+            </div>
+          </div>
+        `;
+      } else {
+        tipsHtml += `
+          <div class="bg-emerald-50 border border-emerald-200/70 p-3 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
+            <i class="fa-solid fa-check text-emerald-600 mt-0.5"></i>
+            <div><strong>音韻辨析表現優異：</strong> 能精確分辨 ch, sh, ph 與 wh 的細微發音特徵！</div>
+          </div>
+        `;
+      }
+
+      // Routine / Context Tip
+      if (cPct < 85 || dPct < 85) {
+        tipsHtml += `
+          <div class="bg-indigo-50 border border-indigo-200/70 p-3 rounded-xl text-xs text-indigo-900 flex items-start gap-2">
+            <i class="fa-regular fa-clock text-indigo-600 mt-0.5"></i>
+            <div>
+              <strong>時間關鍵字聆聽策略：</strong> 聽時間問句時，先捕捉句子後段的時間數字 (如 <em>seven thirty-five</em>) 與動作動詞 (<em>get up / eat dinner</em>)，先在草稿紙寫下數字能大幅提高配對準確率。
+            </div>
+          </div>
+        `;
+      } else {
+        tipsHtml += `
+          <div class="bg-emerald-50 border border-emerald-200/70 p-3 rounded-xl text-xs text-emerald-900 flex items-start gap-2">
+            <i class="fa-solid fa-star text-emerald-600 mt-0.5"></i>
+            <div><strong>作息時鐘辨識極佳：</strong> 熟練掌握 AM/PM 以及日常生活各個環節的英文表達方式！</div>
+          </div>
+        `;
+      }
+
+      tipsContainer.innerHTML = tipsHtml;
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toastMsg").innerText = msg;
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 2600);
+    }
+
+    // ==========================================
+    // 6. INITIALIZATION
+    // ==========================================
+    window.onload = function() {
+      initTabs();
+      changeStage(0);
+    };
+  </script>
+</body>
+</html>
